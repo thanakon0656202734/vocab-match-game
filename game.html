@@ -1,0 +1,40 @@
+<!DOCTYPE html>
+<html lang="th">
+<head>
+  <meta charset="utf-8" />
+  <meta name="viewport" content="width=device-width, initial-scale=1" />
+  <title>เล่นเกมจับคู่คำศัพท์</title>
+  <link rel="stylesheet" href="styles.css">
+</head>
+<body class="game-screen">
+  <!-- สถิติมุมขวาบน -->
+  <div class="scoreboard">
+    <div>เลเวล: <b id="levelLabel">1</b></div>
+    <div>คะแนน: <b id="scoreLabel">0</b></div>
+    <div>ผิดสะสม: <b id="mistakeLabel">0/3</b></div>
+    <div>ความคืบหน้า: <b id="progressLabel">0/5</b></div>
+  </div>
+
+  <!-- ปุ่มเสียง -->
+  <button id="muteBtn" class="sound-btn" title="เปิด/ปิดเสียง">🔈</button>
+
+  <!-- กระดานเกม (เห็นครบหน้าเดียว ไม่ต้องเลื่อน) -->
+  <main class="board">
+    <section class="col">
+      <h3>English</h3>
+      <div id="leftGrid" class="grid"></div>
+    </section>
+    <section class="col">
+      <h3>ไทย</h3>
+      <div id="rightGrid" class="grid"></div>
+    </section>
+  </main>
+
+  <!-- Toast แจ้งเตือนสั้น ๆ -->
+  <div id="toast" class="toast" hidden></div>
+
+  <!-- โหลดคำศัพท์ก่อน, แล้วค่อยระบบเกม -->
+  <script src="vocab.js"></script>
+  <script src="app.js"></script>
+</body>
+</html>

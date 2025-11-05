@@ -1,0 +1,24 @@
+<!DOCTYPE html>
+<html lang="th">
+<head>
+  <meta charset="utf-8" />
+  <meta name="viewport" content="width=device-width, initial-scale=1" />
+  <title>IELTS Vocab Match</title>
+  <link rel="stylesheet" href="styles.css">
+</head>
+<body class="landing">
+  <div class="landing-card">
+    <h1>IELTS Vocab Match</h1>
+    <p>จับคู่คำศัพท์ อังกฤษ–ไทย • 10 คำ/ด่าน</p>
+    <button class="btn-primary" id="startBtn">🎮 เริ่มเกม</button>
+  </div>
+
+  <script>
+    document.getElementById('startBtn').addEventListener('click', () => {
+      // บอกหน้า game.html ว่าขอเริ่มเพลงหลังคลิก (เพื่อกันบล็อก autoplay)
+      sessionStorage.setItem('play_bgm', '1');
+      location.href = 'game.html';
+    });
+  </script>
+</body>
+</html>
