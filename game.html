@@ -36,5 +36,23 @@
   <!-- โหลดคำศัพท์ก่อน, แล้วค่อยระบบเกม -->
   <script src="vocab.js"></script>
   <script src="app.js"></script>
+  <!-- ขวาบน -->
+<div class="right">
+  <div class="hud">
+    <span>Level: <b id="lvLabel">1</b></span>
+    <span>Score: <b id="scoreLabel">0</b>/5</span>
+    <span>Wrong: <b id="wrongLabel">0</b>/3</span>
+  </div>
+  <select id="voiceSelect" class="select">
+    <option value="">Auto English</option>
+    <option value="en-GB">English (UK)</option>
+    <option value="en-US">English (US)</option>
+    <option value="en-AU">English (AU)</option>
+    <option value="en-CA">English (CA)</option>
+    <option value="en-IN">English (IN)</option>
+  </select>
+  <button id="muteBtn" class="icon-btn" title="เสียง">🔈</button>
+</div>
+
 </body>
 </html>

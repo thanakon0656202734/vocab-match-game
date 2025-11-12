@@ -13,6 +13,92 @@ const sClick      = new Audio("sounds/click.mp3");
 bgm.loop = true; bgm.volume = 0.35;
 [sCorrect,sWrong,sPass,sFail,sClick].forEach(a=>a.volume=0.7);
 
+// ===== TTS: English (สำเนียงเลือกได้ ถ้ามี #voiceSelect) =====
+const TTS = {
+  enabled: true,
+  voices: [],
+  ready: false,
+  prefKey: "match_voice_en_pref", // เก็บค่าที่เลือกไว้
+  langPref: null,                 // เช่น "en-GB" | "en-US" | "" (Auto)
+
+  load(){
+    if (!('speechSynthesis' in window)) return;
+    this.langPref = localStorage.getItem(this.prefKey) ?? "";
+    const set = () => { this.voices = speechSynthesis.getVoices(); this.ready = true; };
+    set();
+    speechSynthesis.onvoiceschanged = set;
+
+    // ถ้ามี dropdown ให้ sync ค่า
+    const sel = $("#voiceSelect");
+    if (sel) {
+      sel.value = this.langPref || "";
+      sel.addEventListener("change", ()=>{
+        this.langPref = sel.value || "";
+        localStorage.setItem(this.prefKey, this.langPref);
+        this.prime();
+      });
+    }
+  },
+
+  pickVoice(){
+    if (!this.ready) return null;
+    const list = this.voices || [];
+    const en = list.filter(v => (v.lang||"").toLowerCase().startsWith("en"));
+    if (en.length === 0) return null;
+
+    const pref = (this.langPref||"").toLowerCase();
+
+    // ถ้าเลือกไว้ (en-GB/en-US/...) ให้หาตามนั้นก่อน
+    if (pref) {
+      const exact = en.find(v => (v.lang||"").toLowerCase() === pref);
+      if (exact) return exact;
+      const starts = en.find(v => (v.lang||"").toLowerCase().startsWith(pref));
+      if (starts) return starts;
+    }
+
+    // Auto: พยายามเลือกแบรนด์เสียงที่คุณภาพดี
+    const branded = en.filter(v => /google|microsoft|apple/i.test(v.name));
+    if (branded.length) {
+      const rank = v => {
+        const L = (v.lang||"").toLowerCase();
+        if (L === "en-gb") return 0;
+        if (L === "en-us") return 1;
+        if (L === "en-au") return 2;
+        if (L === "en-ca") return 3;
+        if (L === "en-in") return 4;
+        return 5;
+      };
+      branded.sort((a,b)=>rank(a)-rank(b));
+      return branded[0];
+    }
+    return en[0];
+  },
+
+  speakEN(text){
+    if (!this.enabled || !('speechSynthesis' in window)) return;
+    const u = new SpeechSynthesisUtterance(text);
+    const v = this.pickVoice();
+    if (v) {
+      u.voice = v;
+      u.lang = this.langPref || v.lang || "en-GB";
+    } else {
+      u.lang = this.langPref || "en-GB";
+    }
+    u.rate = 0.95; u.pitch = 1.0; u.volume = 1.0;
+
+    speechSynthesis.cancel();   // กันเสียงซ้อน
+    speechSynthesis.speak(u);
+  },
+
+  // เรียก 1 ครั้งหลังมี user interaction เพื่อปลดล็อกเสียงบนมือถือ
+  prime(){
+    if (!('speechSynthesis' in window)) return;
+    const u = new SpeechSynthesisUtterance(".");
+    u.volume = 0; u.rate = 1; u.lang = this.langPref || "en-GB";
+    speechSynthesis.speak(u);
+  }
+};
+
 // ===== Game Config =====
 const WORDS_PER_LEVEL = 10;  // ใช้ 10 คำต่อด่าน
 const SHOW_PAIRS = 5;        // โชว์ 5 คู่ (=10 tiles)
@@ -24,15 +110,23 @@ const GAME = {
   enSel: null, thSel: null, current: [],
 
   init() {
-    // กัน autoplay: เล่นเพลงหลังมี interaction ครั้งแรกเท่านั้น
-    const askPlay = sessionStorage.getItem('play_bgm') === '1';
-    const startBgm = () => { bgm.play().catch(()=>{}); document.removeEventListener('pointerdown', startBgm); };
-    if (askPlay) document.addEventListener('pointerdown', startBgm, { once:true });
+    // โหลด TTS
+    TTS.load();
 
-    // ปุ่ม mute
-    $("#muteBtn").addEventListener('click', () => {
+    // กัน autoplay: เล่นเพลง/prime เสียง หลังมี interaction ครั้งแรกเท่านั้น
+    const askPlay = sessionStorage.getItem('play_bgm') === '1';
+    const firstInteract = () => {
+      bgm.play().catch(()=>{});
+      TTS.prime();
+      document.removeEventListener('pointerdown', firstInteract);
+    };
+    if (askPlay) document.addEventListener('pointerdown', firstInteract, { once:true });
+
+    // ปุ่ม mute (คุมทั้งเอฟเฟกต์ + TTS)
+    $("#muteBtn")?.addEventListener('click', () => {
       const muted = !bgm.muted;
       [bgm,sCorrect,sWrong,sPass,sFail,sClick].forEach(a => a.muted = muted);
+      TTS.enabled = !muted; // ปิด/เปิดเสียงอ่านอังกฤษด้วย
       $("#muteBtn").textContent = muted ? "🔇" : "🔈";
     });
 
@@ -54,11 +148,15 @@ const GAME = {
     const selected = shuffle(pool).slice(0, SHOW_PAIRS);
     this.current = selected;  // [[en,th] x5]
 
-    // สร้างฝั่ง EN
+    // สร้างฝั่ง EN (คลิกแล้วอ่านเสียง)
     shuffle(selected).forEach(([en]) => {
       const t = document.createElement('div');
       t.className = 'tile'; t.textContent = en;
-      t.onclick = () => this.pickEN(t, en);
+      t.onclick = () => {
+        sClick.currentTime = 0; sClick.play();
+        TTS.speakEN(en);               // ✅ อ่านออกเสียงอังกฤษ
+        this.pickEN(t, en);
+      };
       left.appendChild(t);
     });
 
@@ -66,7 +164,10 @@ const GAME = {
     shuffle(selected).forEach(([en, th]) => {
       const t = document.createElement('div');
       t.className = 'tile'; t.textContent = th;
-      t.onclick = () => this.pickTH(t, en);
+      t.onclick = () => {
+        sClick.currentTime = 0; sClick.play();
+        this.pickTH(t, en);
+      };
       right.appendChild(t);
     });
 
@@ -77,14 +178,12 @@ const GAME = {
   },
 
   pickEN(tile, en) {
-    sClick.currentTime = 0; sClick.play();
     $$(".tile.selected").forEach(t => t.classList.remove('selected'));
     tile.classList.add('selected');
     this.enSel = { tile, en };
   },
 
   pickTH(tile, enFromTH) {
-    sClick.currentTime = 0; sClick.play();
     if (!this.enSel) { tile.classList.add('selected'); setTimeout(()=>tile.classList.remove('selected'), 250); return; }
 
     const ok = this.enSel.en === enFromTH;
@@ -123,14 +222,15 @@ const GAME = {
   },
 
   updateLabels() {
-    $("#levelLabel").textContent    = this.level;
-    $("#scoreLabel").textContent    = this.score;
-    $("#mistakeLabel").textContent  = `${this.mistakes}/${MAX_MISTAKES}`;
-    $("#progressLabel").textContent = `${this.progress}/${PASS_POINTS}`;
+    $("#levelLabel") && ($("#levelLabel").textContent    = this.level);
+    $("#scoreLabel") && ($("#scoreLabel").textContent    = this.score);
+    $("#mistakeLabel") && ($("#mistakeLabel").textContent  = `${this.mistakes}/${MAX_MISTAKES}`);
+    $("#progressLabel") && ($("#progressLabel").textContent = `${this.progress}/${PASS_POINTS}`);
   },
 
   toast(msg, ok=true){
     const t = $("#toast");
+    if (!t) return;
     t.textContent = msg; t.className = `toast ${ok?'ok':'err'}`; t.hidden = false;
     setTimeout(()=> t.hidden = true, 900);
   }

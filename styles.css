@@ -37,3 +37,8 @@ html, body{height:100vh; overflow:hidden; margin:0; font-family:system-ui,-apple
 .toast{position:fixed; left:50%; top:18px; transform:translateX(-50%); background:#0b2030; border:1px solid rgba(255,255,255,.12); padding:10px 14px; border-radius:12px; box-shadow:var(--shadow); z-index:50;}
 .toast.ok{background:#052b22; border-color:rgba(16,185,129,.35); color:#a7f3d0;}
 .toast.err{background:#3a0d15; border-color:rgba(244,63,94,.5); color:#fecaca;}
+
+.select{
+  border:1px solid #d0e3d4;background:#fff;border-radius:10px;
+  padding:6px 8px;margin-right:8px;cursor:pointer;font-weight:600
+}
